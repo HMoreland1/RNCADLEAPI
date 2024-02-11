@@ -1,52 +1,121 @@
 ﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using RNCADLEAPI.Data;
+using Microsoft.EntityFrameworkCore;
+using System.Data.Entity;
+using EntityState = Microsoft.EntityFrameworkCore.EntityState;
 
 namespace RNCADLEAPI.Controllers
 {
     [Route("contentcategories")]
     public class ContentCategoriesController : ControllerBase
     {
+        private readonly AppDbContext _context;
+
+        public ContentCategoriesController(AppDbContext context)
+        {
+            _context = context;
+        }
         // GET api/rncadleapi/contentcategories/all
         [HttpGet]
         [Route("all")]
-        public IEnumerable<ContentCategory> GetAllContentCategories()
+        public ActionResult<IEnumerable<ContentCategory>> GetAllContentCategories()
         {
-            return null;
-            // Implement logic to retrieve all content categories from the database
+            var categories = _context.ContentCategories.ToList();
+
+            if (categories == null || categories.Count == 0)
+            {
+                return NotFound();
+            }
+            return categories;
         }
 
         // GET api/rncadleapi/contentcategories/{id}
         [HttpGet]
         [Route("{id}")]
-        public ContentCategory GetContentCategoryById(int id)
+        public async Task<ActionResult<ContentCategory>> GetContentCategoryById(int id)
         {
-            return null;
-            // Implement logic to retrieve specific content category by id from the database
+            var category = await _context.ContentCategories.FindAsync(id);
+
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            return category;
         }
 
         // POST api/rncadleapi/contentcategories/add
         [HttpPost]
         [Route("add")]
-        public void AddContentCategory([FromBody] ContentCategory contentCategory)
+        public async Task<ActionResult<ContentCategory>> PostCategory(ContentCategory Category)
         {
-            // Implement logic to add new content category to the database
+            _context.ContentCategories.Add(Category);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetContentCategoryById", new { id = Category.CategoryId}, Category);
         }
 
         // PUT api/rncadleapi/contentcategories/update/{id}
-        [HttpPut]
-        [Route("update/{id}")]
-        public void UpdateContentCategory(int id, [FromBody] ContentCategory contentCategory)
+        [HttpPut("update")]
+        public async Task<IActionResult> PutCategory(int id, [FromBody] ContentCategory Category )
         {
-            // Implement logic to update existing content category in the database
+            if (Category == null || id != Category.CategoryId)
+            {
+                return BadRequest();
+            }
+
+            _context.Entry(Category).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!CategoryExists(Category.CategoryId))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
         }
 
         // DELETE api/rncadleapi/contentcategories/delete/{id}
         [HttpDelete]
         [Route("delete/{id}")]
-        public void DeleteContentCategory(int id)
+        public async Task<IActionResult> DeleteCategory(int id)
         {
-            // Implement logic to delete content category from the database
+            var category = await _context.ContentCategories.FindAsync(id);
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            _context.ContentCategories.Remove(category);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool UserExists(int id)
+        {
+            return _context.Users.Any(e => e.UserId == id);
+        }
+
+        private bool CategoryExists(int id)
+        {
+            return _context.ContentCategories.Any(e => e.CategoryId == id);
         }
     }
+
+    public interface IActionResult<T>
+    {
+    }
+    
 }

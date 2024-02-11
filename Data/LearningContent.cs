@@ -21,9 +21,9 @@ public partial class LearningContent
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual ContentCategory? Category { get; set; }
+    public virtual ContentCategory? Category { get; }
 
-    public virtual User? CreatedByUser { get; set; }
+    public virtual User? CreatedByUser { get; }
 
     public virtual ICollection<UserProgress> UserProgresses { get; set; } = new List<UserProgress>();
 }

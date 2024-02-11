@@ -1,52 +1,113 @@
 ﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using RNCADLEAPI.Data;
+using Microsoft.EntityFrameworkCore;
+using System.Data.Entity;
+using EntityState = Microsoft.EntityFrameworkCore.EntityState;
 
 namespace RNCADLEAPI.Controllers
 {
     [Route("learningcontent")]
     public class LearningContentController : ControllerBase
     {
+        private readonly AppDbContext _context;
+
+        public LearningContentController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         // GET api/rncadleapi/learningcontent/all
         [HttpGet]
         [Route("all")]
-        public IEnumerable<LearningContent> GetAllLearningContent()
+        public ActionResult<IEnumerable<LearningContent>> GetAllLearningContent()
         {
-            return null;
-            // Implement logic to retrieve all learning content from the database
+            var learningContent = _context.LearningContents.ToList();
+
+            if (learningContent == null || learningContent.Count == 0)
+            {
+                return NotFound();
+            }
+            return learningContent;
         }
 
         // GET api/rncadleapi/learningcontent/{id}
         [HttpGet]
         [Route("{id}")]
-        public LearningContent GetLearningContentById(int id)
+        public ActionResult<LearningContent> GetLearningContentById(int id)
         {
-            return null;
-            // Implement logic to retrieve specific learning content by id from the database
+            var content = _context.LearningContents.Find(id);
+
+            if (content == null)
+            {
+                return NotFound();
+            }
+
+            return content;
         }
 
         // POST api/rncadleapi/learningcontent/add
         [HttpPost]
         [Route("add")]
-        public void AddLearningContent([FromBody] LearningContent learningContent)
+        public async Task<ActionResult<LearningContent>> AddLearningContent([FromBody] LearningContent learningContent)
         {
-            // Implement logic to add new learning content to the database
+            _context.LearningContents.Add(learningContent);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetLearningContentById", new { id = learningContent.ContentId }, learningContent);
         }
 
         // PUT api/rncadleapi/learningcontent/update/{id}
         [HttpPut]
         [Route("update/{id}")]
-        public void UpdateLearningContent(int id, [FromBody] LearningContent learningContent)
+        public async Task<IActionResult> UpdateLearningContent(int id, [FromBody] LearningContent learningContent)
         {
-            // Implement logic to update existing learning content in the database
+            if (learningContent == null || id != learningContent.ContentId)
+            {
+                return BadRequest();
+            }
+
+            _context.Entry(learningContent).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!LearningContentExists(learningContent.ContentId))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
         }
 
         // DELETE api/rncadleapi/learningcontent/delete/{id}
         [HttpDelete]
         [Route("delete/{id}")]
-        public void DeleteLearningContent(int id)
+        public async Task<IActionResult> DeleteLearningContent(int id)
         {
-            // Implement logic to delete learning content from the database
+            var content = await _context.LearningContents.FindAsync(id);
+            if (content == null)
+            {
+                return NotFound();
+            }
+
+            _context.LearningContents.Remove(content);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool LearningContentExists(int id)
+        {
+            return _context.LearningContents.Any(e => e.ContentId == id);
         }
     }
 }
